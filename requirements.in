@@ -3,6 +3,8 @@ matplotlib
 nltk
 numpy
 openTSNE
+pytest
 questionary
 scikit-learn
 scipy
+streamlit>=1.38

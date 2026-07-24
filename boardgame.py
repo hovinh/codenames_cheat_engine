@@ -1,17 +1,16 @@
-import questionary
 from nltk.corpus import wordnet as wn
 from spymaster import SpyMaster
-import os
+
 
 class CodenamesBoardGame(object):
     def __init__(self, keyword_list, team_guessword_dict):
         '''
         @params:
-            - keyword_list: list of str, 25 code words picked.
+            - keyword_list: list of str, code words on the board.
             - team_guessword_dict: dictionary of list of str. Example:
                 {
-                    'team_blue': ['house', 'bird', 'book', ...], # 8 words, always play first
-                    'team_red': ['cat', 'dog', 'pineapple', ...], # 7 words
+                    'team_blue': ['house', 'bird', 'book', ...], # always plays first
+                    'team_red': ['cat', 'dog', 'pineapple', ...],
                 }
         '''
 
@@ -22,13 +21,19 @@ class CodenamesBoardGame(object):
         self._keyword_list = keyword_list
         self._team_guessword_dict = team_guessword_dict
         self._team_name_list = ['team_blue', 'team_red']
-        self._team_winning_score_list = [9, 8]
+        # a team wins once every one of its own words has been found
+        self._team_winning_score_list = [
+            len(team_guessword_dict['team_blue']),
+            len(team_guessword_dict['team_red']),
+        ]
         self._team_score_dict = {
             'team_blue': 0,
             'team_red': 0,
         }
         self._team_turn = 0
-        self._game_history = ''
+
+        # list of dict entries: {'team', 'hint', 'selected_words', 'score', 'required_score'}
+        self._game_history = []
 
         # SpyMaster can be shared among 2 teams because the behaviour is deterministic
         self._spy_master = SpyMaster()
@@ -49,112 +54,54 @@ class CodenamesBoardGame(object):
 
         return is_valid, invalid_word_list
 
-    def start_game(self):
+    def get_suggestions(self):
+        '''Return (hint_list, filtered_guessword_list) for the team whose turn it is.'''
+        team_name = self.get_team_turn()
+        keyword_list, guessword_list, chosenword_list = self.get_keyword_guessword_chosenword_list(team_name)
+        hint_list, filtered_guessword_list = self._spy_master.suggest(keyword_list=keyword_list,
+                                                                        guessword_list=guessword_list,
+                                                                        chosenword_list=chosenword_list)
+        return hint_list, filtered_guessword_list
 
-        while (self.check_game_is_over() == False):
-            team_name = self.get_team_turn()
-            keyword_list, guessword_list, chosenword_list = self.get_keyword_guessword_chosenword_list(team_name)
-            
-            self.print_and_update_game_history(f"This is {team_name}'s turn.")
-            hint_list, filtered_guessword_list = self._spy_master.suggest(keyword_list=keyword_list, 
-                                                                          guessword_list=guessword_list, 
-                                                                          chosenword_list=chosenword_list)
-            selected_hint, selected_words = self.select_hint_and_guesswords(hint_list, filtered_guessword_list)
-            self.print_and_update_game_history(f"Selected hint: {selected_hint} | Selected guessed words: {selected_words}")
-            
-            self.update_chosenword_list(new_chosenword_list=selected_words)
-            score, required_score = self.update_team_score(team_name)
-            self.print_and_update_game_history(f'Updated score: {score}/{required_score}')
-            self.switch_turn()
+    def apply_turn(self, hint, selected_words):
+        '''
+        Record the current team's guess, update score, log history, and advance the turn.
 
-        return self._game_history
+        @params:
+            - hint: the clue that was picked (a Hint, a synset, or None). Only kept for the
+              game history log, so any printable value works.
+            - selected_words: list of str, the word(s) the team guessed this turn.
 
-    def check_game_is_over(self):
+        @returns: (team_name, score, required_score) for the team that just played.
+        '''
+        team_name = self.get_team_turn()
+        self.update_chosenword_list(selected_words)
+        score, required_score = self.update_team_score(team_name)
+
+        self._game_history.append({
+            'team': team_name,
+            'hint': str(hint) if hint is not None else None,
+            'selected_words': list(selected_words),
+            'score': score,
+            'required_score': required_score,
+        })
+
+        self.switch_turn()
+        return team_name, score, required_score
+
+    def is_game_over(self):
         for team_name, winning_score in zip(self._team_name_list, self._team_winning_score_list):
-            team_score = self._team_score_dict[team_name]
-            if (team_score >= winning_score):
-                print (f'The winner is {team_name}!!!')
+            if (self._team_score_dict[team_name] >= winning_score):
                 return True
 
-        return False       
+        return False
 
-    def select_hint_and_guesswords(self, hint_list, guessword_list, do_clear_screen=True):
-        #hint_str_list = [f'Synset {ss} | Definition: {defi}\n' + (len(examples)>0)*f'Examples: {examples}\n' + f'Count: {count} | Lemmas: {lemma} | Connected words: {corr_words}' for ss, defi, examples, lemma, count, corr_words in hint_list]
-        
-        selected_idx = 0
-        numb_candidates_shown = 8
-        numb_candidates_total = len(hint_list)
+    def get_winner(self):
+        for team_name, winning_score in zip(self._team_name_list, self._team_winning_score_list):
+            if (self._team_score_dict[team_name] >= winning_score):
+                return team_name
 
-        # If there is hint can lead to 2 words at least
-        if (numb_candidates_total > 0):
-            if (do_clear_screen == True):
-                self.clear_screen()
-
-            while (True):
-                if (do_clear_screen == True):
-                    self.clear_screen()
-
-                selected_idx_max = min(selected_idx+numb_candidates_shown, numb_candidates_total)
-                candidate_idx_list = [i for i in range(selected_idx, selected_idx_max, 1)]
-                #print (f'Selected: {selected_idx, selected_idx_max} | Candidated: {candidate_idx_list}')
-                next_idx = candidate_idx_list[-1] + 1
-                #print (f'Next idx: {next_idx}')
-            
-                for idx in candidate_idx_list:
-                    hint_str = str(hint_list[idx])
-                    print (f'<{idx}> ', hint_str, '\n')
-
-                numb_candidates_remaining = numb_candidates_total - selected_idx_max
-                numb_candidates_shown_next = min(numb_candidates_shown, numb_candidates_remaining)
-                if (numb_candidates_shown_next > 0):
-                    print (f'<{next_idx}> See the next {numb_candidates_shown_next} synsets out of {numb_candidates_total}.')
-                else:
-                    print (f'<{next_idx}> Back to the beginning.')
-        
-                selected_idx_str = questionary.select(
-                    'Select hint',
-                    choices = [str(i) for i in candidate_idx_list] + [str(next_idx)]
-                ).ask()
-
-                selected_idx = int(selected_idx_str)
-                if (selected_idx in candidate_idx_list):
-                    break
-                else:
-                    if (next_idx < numb_candidates_total):
-                        selected_idx = next_idx
-                    else:
-                        selected_idx = 0
-            
-            selected_hint = hint_list[selected_idx]
-            synset, valid_word_count, corr_words = selected_hint.get_info()
-
-            selected_words = questionary.checkbox(
-                'Select one or more guessed words',
-                choices = corr_words
-            ).ask()
-
-        # Else we just list of individual guess words and pick one
-        else:
-            if (do_clear_screen == True):
-                self.clear_screen()
-
-            numb_guesswords = len(guessword_list)
-            print ('There is no hint covering at least 2 words.')
-            for idx, word in enumerate(guessword_list):
-                ss_list = wn.synsets(word)
-                print (f'<{idx}> ', word, f' | Synsets: {ss_list}\n')
-
-            selected_idx_str = questionary.select(
-                'Select hint',
-                choices = [str(i) for i in range(numb_guesswords)]
-            ).ask()
-
-            selected_idx = int(selected_idx_str)
-            word = guessword_list[selected_idx]
-            synset = wn.synsets(word)[0]
-            selected_words = [word]
-
-        return synset, selected_words
+        return None
 
     def update_team_score(self, team_name):
         guessword_list = self._team_guessword_dict[team_name]
@@ -163,7 +110,7 @@ class CodenamesBoardGame(object):
         for word in guessword_list:
             if word in chosenword_list:
                 score += 1
-        
+
         self._team_score_dict[team_name] = score
         required_score = self._team_winning_score_list[self._team_turn]
         return score, required_score
@@ -184,19 +131,17 @@ class CodenamesBoardGame(object):
     def update_chosenword_list(self, new_chosenword_list):
         self._chosenword_list.extend(new_chosenword_list)
 
-    def update_game_history(self, text):
-        self._game_history += f'{text}\n'
+    def get_keyword_list(self):
+        return list(self._keyword_list)
 
-    def print_and_update_game_history(self, text):
-        print (text)
-        self.update_game_history(text)
+    def get_team_guessword_dict(self):
+        return {team: list(words) for team, words in self._team_guessword_dict.items()}
 
-    def clear_screen(self):
-        # Source: https://www.geeksforgeeks.org/clear-screen-python/
-        # for windows 
-        if (os.name == 'nt'): 
-            _ = os.system('cls') 
-    
-        # for mac and linux(here, os.name is 'posix') 
-        else: 
-            _ = os.system('clear') 
+    def get_chosen_words(self):
+        return list(self._chosenword_list)
+
+    def get_score_dict(self):
+        return dict(self._team_score_dict)
+
+    def get_game_history(self):
+        return list(self._game_history)

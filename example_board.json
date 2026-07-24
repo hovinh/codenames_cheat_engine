@@ -1,0 +1,13 @@
+{
+  "keyword_list": [
+    "apple", "robot", "castle", "ocean", "guitar",
+    "spider", "pyramid", "laser", "jungle", "comet",
+    "anchor", "wizard", "volcano", "satellite", "pirate",
+    "crystal", "tornado", "compass", "dragon", "marble",
+    "engine", "shadow", "falcon", "diamond", "tunnel"
+  ],
+  "team_guessword_dict": {
+    "team_blue": ["robot", "guitar", "laser", "comet", "wizard", "satellite", "crystal", "engine", "falcon"],
+    "team_red": ["apple", "castle", "spider", "pyramid", "jungle", "anchor", "volcano", "pirate"]
+  }
+}
