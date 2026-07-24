@@ -25,3 +25,12 @@ class Hint(object):
 
     def get_info(self):
         return self._synset, self._valid_word_count, self._correlated_word_list
+
+    def get_label(self):
+        return self._synset.name()
+
+    def get_definition(self):
+        return self._synset.definition()
+
+    def get_examples(self):
+        return self._synset.examples()

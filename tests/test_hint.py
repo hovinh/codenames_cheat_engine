@@ -22,3 +22,16 @@ def test_hint_str_contains_key_fields():
     assert synset.definition() in rendered
     assert 'dog' in rendered
     assert 'cat' in rendered
+
+
+def test_hint_get_label_returns_synset_name():
+    synset = wn.synsets('dog')[0]
+    hint = Hint(synset=synset, valid_word_count=2, correlated_word_list=['dog', 'cat'])
+    assert hint.get_label() == synset.name()
+
+
+def test_hint_get_definition_and_examples_match_synset():
+    synset = wn.synsets('dog')[0]
+    hint = Hint(synset=synset, valid_word_count=2, correlated_word_list=['dog', 'cat'])
+    assert hint.get_definition() == synset.definition()
+    assert hint.get_examples() == synset.examples()

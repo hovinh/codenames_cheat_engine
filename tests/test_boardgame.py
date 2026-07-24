@@ -123,3 +123,32 @@ def test_getters_return_defensive_copies():
     team_dict = game.get_team_guessword_dict()
     team_dict['team_blue'].append('extra')
     assert 'extra' not in game.get_team_guessword_dict()['team_blue']
+
+
+def test_get_suggestions_delegates_to_injected_spy_master():
+    class FakeSpyMaster:
+        def __init__(self):
+            self.calls = []
+
+        def suggest(self, keyword_list, guessword_list, chosenword_list):
+            self.calls.append((keyword_list, guessword_list, chosenword_list))
+            return ['fake_hint'], guessword_list
+
+    fake_spy_master = FakeSpyMaster()
+    game = CodenamesBoardGame(
+        ['dog', 'cat', 'car', 'tree'],
+        {'team_blue': ['dog', 'cat'], 'team_red': ['car']},
+        spy_master=fake_spy_master,
+    )
+
+    hint_list, filtered_guessword_list = game.get_suggestions()
+
+    assert hint_list == ['fake_hint']
+    assert filtered_guessword_list == ['dog', 'cat']
+    assert len(fake_spy_master.calls) == 1
+
+
+def test_default_spy_master_is_used_when_none_provided():
+    from spymaster import SpyMaster
+    game = make_game()
+    assert isinstance(game._spy_master, SpyMaster)

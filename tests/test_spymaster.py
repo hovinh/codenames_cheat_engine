@@ -1,3 +1,5 @@
+from nltk.corpus import wordnet as wn
+
 from spymaster import SpyMaster
 
 
@@ -56,3 +58,30 @@ def test_suggest_excludes_chosen_words_from_candidates():
     for hint in hint_list:
         _, _, corr_words = hint.get_info()
         assert 'dog' not in corr_words
+
+
+def test_generate_hints_excludes_candidates_whose_lemma_is_a_board_word():
+    spy_master = SpyMaster()
+    dog_synset = wn.synsets('dog', pos=wn.NOUN)[0]
+
+    hint_list = spy_master.generate_hints(
+        keyword_list=['dog', 'pet', 'cat'],
+        forbidword_list=[],
+        hypernym_list=[dog_synset],
+    )
+
+    assert hint_list == []
+
+
+def test_suggest_never_returns_a_hint_that_is_a_form_of_a_board_word():
+    spy_master = SpyMaster()
+    hint_list, _ = spy_master.suggest(
+        keyword_list=['dog', 'cat', 'wolf'],
+        guessword_list=['dog', 'cat', 'wolf'],
+        chosenword_list=[],
+    )
+    board_words = ['dog', 'cat', 'wolf']
+    for hint in hint_list:
+        for lemma_name in [lemma.name() for lemma in hint.get_info()[0].lemmas()]:
+            for board_word in board_words:
+                assert lemma_name.lower() != board_word.lower()

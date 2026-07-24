@@ -145,7 +145,9 @@ psutil==7.2.2
 pure-eval==0.2.3
     # via stack-data
 pyarrow==21.0.0
-    # via streamlit
+    # via
+    #   -r requirements.in
+    #   streamlit
 pydeck==0.9.3
     # via streamlit
 pygments==2.20.0
@@ -178,7 +180,9 @@ referencing==0.36.2
 regex==2026.1.15
     # via nltk
 requests==2.32.5
-    # via streamlit
+    # via
+    #   -r requirements.in
+    #   streamlit
 rpds-py==0.27.1
     # via
     #   jsonschema

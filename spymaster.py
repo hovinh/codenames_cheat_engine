@@ -2,6 +2,7 @@ import nltk
 from nltk.corpus import wordnet as wn
 import itertools
 from hint import Hint
+from clue_safety import is_related_to_board_word
 
 class SpyMaster(object):
     def __init__(self, similarity_method='lch'):
@@ -149,6 +150,11 @@ class SpyMaster(object):
         compute_sim = self._similarity_score_dict[self._similarity_method]
 
         for hypernym in hypernym_list:
+
+            # skip clues that are themselves a form of a word on the board
+            lemma_names = [lemma.name() for lemma in hypernym.lemmas()]
+            if any(is_related_to_board_word(lemma_name, keyword_list) for lemma_name in lemma_names):
+                continue
 
             # only compute similarity when two synonyms have the same POS, otherwise 0, i.e. minimal similarity
             hypernym_POS = hypernym.pos()

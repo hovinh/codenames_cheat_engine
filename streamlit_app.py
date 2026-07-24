@@ -3,13 +3,19 @@ import json
 import streamlit as st
 
 from boardgame import CodenamesBoardGame
+from concept_net_spymaster import ConceptNetSpyMaster
 from sample_games import select_game
+from spymaster import SpyMaster
 
 TEAM_LABELS = {'team_blue': 'Blue', 'team_red': 'Red'}
 TEAM_COLORS = {'team_blue': '#3b82f6', 'team_red': '#ef4444'}
 NEUTRAL_COLOR = '#9ca3af'
 SAMPLE_GAME_COUNT = 3
 EXAMPLE_BOARD_PATH = 'example_board.json'
+CLUE_ENGINES = {
+    'WordNet': SpyMaster,
+    'ConceptNet (experimental)': ConceptNetSpyMaster,
+}
 
 
 def init_state():
@@ -71,29 +77,49 @@ def validate_custom_board(keyword_list, team_guessword_dict):
     return errors
 
 
-def try_create_game(keyword_list, team_guessword_dict):
+def try_create_game(keyword_list, team_guessword_dict, spy_master=None):
     try:
-        st.session_state['game'] = CodenamesBoardGame(keyword_list, team_guessword_dict)
+        st.session_state['game'] = CodenamesBoardGame(keyword_list, team_guessword_dict, spy_master=spy_master)
         st.session_state['current_hints'] = None
     except ValueError as e:
         st.error(str(e))
+
+
+def render_help_guide():
+    st.markdown(
+        '- **Pick a board** — a sample one, or build your own (paste words, or upload/download the example JSON).\n'
+        "- Each turn, the engine suggests clues for whichever team's turn it is. Pick a clue, then pick the "
+        "word(s) your team is guessing for it.\n"
+        '- Blue always goes first. A team wins once all of its own words have been found.\n'
+        '- Colors show **both** teams\' words — this is a spymaster tool, nothing is hidden. Guessed words fade '
+        'out and get struck through.'
+    )
+
+
+def render_engine_selector():
+    return st.radio('Clue engine', list(CLUE_ENGINES.keys()), horizontal=True,
+                     help='WordNet uses dictionary hypernyms (precise, sometimes narrow). '
+                          'ConceptNet uses a broader commonsense association graph (more creative, experimental).')
 
 
 def render_setup():
     st.title('🕵️ Codenames Cheat Engine')
     st.write(
         'Pick a sample board or build your own, then let the engine suggest '
-        'WordNet-based clues for each team, turn by turn.'
+        'clues for each team, turn by turn.'
     )
+    render_help_guide()
+    st.divider()
 
     mode = st.radio('Board source', ['Sample game', 'Custom game'], horizontal=True)
 
     if mode == 'Sample game':
         idx = st.selectbox('Pick a sample board', list(range(SAMPLE_GAME_COUNT)),
                             format_func=lambda i: f'Sample game {i}')
+        engine_name = render_engine_selector()
         if st.button('Start game', type='primary'):
             keyword_list, team_guessword_dict = select_game(idx)
-            try_create_game(keyword_list, team_guessword_dict)
+            try_create_game(keyword_list, team_guessword_dict, spy_master=CLUE_ENGINES[engine_name]())
 
     else:
         try:
@@ -133,6 +159,7 @@ def render_setup():
         words_raw = st.text_area('Board words (25 total)', height=100)
         blue_raw = st.text_area('Team Blue words (subset of the board, plays first)')
         red_raw = st.text_area('Team Red words (subset of the board)')
+        engine_name = render_engine_selector()
 
         if st.button('Start game', type='primary'):
             if uploaded_file is not None:
@@ -154,7 +181,7 @@ def render_setup():
                     for e in errors:
                         st.error(e)
                 else:
-                    try_create_game(keyword_list, team_guessword_dict)
+                    try_create_game(keyword_list, team_guessword_dict, spy_master=CLUE_ENGINES[engine_name]())
 
     if st.session_state['game'] is not None:
         st.rerun()
@@ -200,8 +227,8 @@ def render_scoreboard(game):
 
 
 def render_hint_label(hint):
-    synset, valid_word_count, corr_words = hint.get_info()
-    return f"{synset.name()} — covers {valid_word_count} word(s): {', '.join(corr_words)}"
+    _, valid_word_count, corr_words = hint.get_info()
+    return f"{hint.get_label()} — covers {valid_word_count} word(s): {', '.join(corr_words)}"
 
 
 def render_turn(game):
@@ -209,7 +236,7 @@ def render_turn(game):
     st.subheader(f"{TEAM_LABELS[team_name]}'s turn")
 
     if st.session_state['current_hints'] is None:
-        with st.spinner('Searching WordNet for clues...'):
+        with st.spinner('Searching for clues...'):
             hint_list, guessword_list = game.get_suggestions()
         st.session_state['current_hints'] = (hint_list, guessword_list)
 
@@ -222,13 +249,16 @@ def render_turn(game):
             format_func=lambda i: render_hint_label(hint_list[i]),
         )
         selected_hint = hint_list[selected_idx]
-        synset, _, corr_words = selected_hint.get_info()
+        _, _, corr_words = selected_hint.get_info()
 
-        with st.expander('Clue details'):
-            st.write(f"**Definition:** {synset.definition()}")
-            examples = synset.examples()
-            if examples:
-                st.write(f"**Examples:** {'; '.join(examples)}")
+        definition = selected_hint.get_definition()
+        examples = selected_hint.get_examples()
+        if definition or examples:
+            with st.expander('Clue details'):
+                if definition:
+                    st.write(f"**Definition:** {definition}")
+                if examples:
+                    st.write(f"**Examples:** {'; '.join(examples)}")
 
         selected_words = st.multiselect('Word(s) your team guesses', corr_words)
 

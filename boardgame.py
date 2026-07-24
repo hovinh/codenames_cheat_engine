@@ -3,7 +3,7 @@ from spymaster import SpyMaster
 
 
 class CodenamesBoardGame(object):
-    def __init__(self, keyword_list, team_guessword_dict):
+    def __init__(self, keyword_list, team_guessword_dict, spy_master=None):
         '''
         @params:
             - keyword_list: list of str, code words on the board.
@@ -12,6 +12,10 @@ class CodenamesBoardGame(object):
                     'team_blue': ['house', 'bird', 'book', ...], # always plays first
                     'team_red': ['cat', 'dog', 'pineapple', ...],
                 }
+            - spy_master: optional clue-generation engine implementing
+              suggest(keyword_list, guessword_list, chosenword_list). Defaults
+              to the WordNet-based SpyMaster; pass e.g. a ConceptNetSpyMaster
+              to swap engines.
         '''
 
         is_valid, invalid_word_list = self.check_all_keywords_valid(keyword_list)
@@ -36,7 +40,7 @@ class CodenamesBoardGame(object):
         self._game_history = []
 
         # SpyMaster can be shared among 2 teams because the behaviour is deterministic
-        self._spy_master = SpyMaster()
+        self._spy_master = spy_master if spy_master is not None else SpyMaster()
 
         # keep track of all the words have been chosen so far
         self._chosenword_list = list()
