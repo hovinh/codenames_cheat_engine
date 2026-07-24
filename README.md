@@ -4,18 +4,22 @@ This is a python library to generate clue in the Boardgame Codenames, in form of
 
 ## Environment Setup
 
-You create a virtual environment for this project as follows:
+Dependencies are managed with [pip-tools](https://github.com/jazzband/pip-tools). Create a virtual environment and install the pinned dependencies as follows:
 ```bash
-conda create -n codenames python=3.6
-conda activate codenames
-conda install numpy scipy
-conda install -c anaconda scikit-learn
-conda install -c conda-forge matplotlib
-conda install -c anaconda nltk
-conda install -c anaconda ipykernel
-conda install -c anaconda opentsne
-pip install questionary
-python -m ipykernel install --user --name=codenames
+python -m venv .venv
+.venv/Scripts/pip install pip-tools    # Windows; use .venv/bin/pip on macOS/Linux
+.venv/Scripts/python -m piptools sync requirements.txt
+```
+
+To run the notebook, register the venv as a Jupyter kernel:
+```bash
+.venv/Scripts/python -m ipykernel install --user --name=codenames
+```
+
+To change dependencies, edit `requirements.in`, then regenerate the lockfile and re-sync:
+```bash
+.venv/Scripts/python -m piptools compile requirements.in -o requirements.txt
+.venv/Scripts/python -m piptools sync requirements.txt
 ```
 
 ## Getting-started
