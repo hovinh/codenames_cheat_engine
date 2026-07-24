@@ -243,6 +243,9 @@ def render_turn(game):
 
     hint_list, guessword_list = st.session_state['current_hints']
 
+    chosen_words = set(game.get_chosen_words())
+    available_words = [w for w in game.get_keyword_list() if w not in chosen_words]
+
     if hint_list:
         selected_idx = st.radio(
             'Pick a clue',
@@ -261,7 +264,14 @@ def render_turn(game):
                 if examples:
                     st.write(f"**Examples:** {'; '.join(examples)}")
 
-        selected_words = st.multiselect('Word(s) your team guesses', corr_words)
+        # Offer every remaining board word, not just the clue's intended targets —
+        # a teammate can misread a clue and pick a word the spymaster didn't mean.
+        ordered_words = corr_words + [w for w in available_words if w not in corr_words]
+        selected_words = st.multiselect(
+            'Word(s) your team guesses', ordered_words,
+            help="Suggested words for this clue are listed first, but any remaining board word "
+                 "can be picked in case your team guesses wrong."
+        )
 
         if st.button('Submit turn', type='primary', disabled=not selected_words):
             game.apply_turn(selected_hint, selected_words)
@@ -269,8 +279,8 @@ def render_turn(game):
             st.rerun()
     else:
         st.info('No clue covers 2+ words this turn — pick one word to guess directly.')
-        word = st.selectbox('Word', guessword_list)
-        if st.button('Submit turn', type='primary', disabled=not guessword_list):
+        word = st.selectbox('Word', available_words)
+        if st.button('Submit turn', type='primary', disabled=not available_words):
             game.apply_turn(None, [word])
             st.session_state['current_hints'] = None
             st.rerun()
