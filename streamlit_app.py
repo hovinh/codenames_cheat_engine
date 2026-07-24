@@ -1,11 +1,17 @@
 import json
 
+import nltk
 import streamlit as st
 
 from boardgame import CodenamesBoardGame
 from concept_net_spymaster import ConceptNetSpyMaster
 from sample_games import select_game
 from spymaster import SpyMaster
+
+try:
+    nltk.data.find('corpora/wordnet.zip')
+except LookupError:
+    nltk.download('wordnet')
 
 TEAM_LABELS = {'team_blue': 'Blue', 'team_red': 'Red'}
 TEAM_COLORS = {'team_blue': '#3b82f6', 'team_red': '#ef4444'}
