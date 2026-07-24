@@ -8,8 +8,7 @@ class ConceptNetSpyMaster(object):
         '''
         @params:
             - min_weight: float, minimum ConceptNet edge weight for a neighbor to
-              count as related. ConceptNet's RelatedTo weights start around 1.0
-              for reliable assertions; raise this to tighten suggestions.
+              count as related; raise this to tighten suggestions further.
         '''
         self._min_weight = min_weight
 

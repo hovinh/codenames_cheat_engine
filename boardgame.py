@@ -9,9 +9,12 @@ class CodenamesBoardGame(object):
             - keyword_list: list of str, code words on the board.
             - team_guessword_dict: dictionary of list of str. Example:
                 {
-                    'team_blue': ['house', 'bird', 'book', ...], # always plays first
+                    'team_blue': ['house', 'bird', 'book', ...],
                     'team_red': ['cat', 'dog', 'pineapple', ...],
                 }
+              Whichever team has more words to find plays first (matches
+              official Codenames rules — the extra word offsets the advantage
+              of going first). Ties default to team_blue.
             - spy_master: optional clue-generation engine implementing
               suggest(keyword_list, guessword_list, chosenword_list). Defaults
               to the WordNet-based SpyMaster; pass e.g. a ConceptNetSpyMaster
@@ -34,7 +37,8 @@ class CodenamesBoardGame(object):
             'team_blue': 0,
             'team_red': 0,
         }
-        self._team_turn = 0
+        # the team with more words to find plays first; ties default to team_blue
+        self._team_turn = 0 if self._team_winning_score_list[0] >= self._team_winning_score_list[1] else 1
 
         # list of dict entries: {'team', 'hint', 'selected_words', 'score', 'required_score'}
         self._game_history = []

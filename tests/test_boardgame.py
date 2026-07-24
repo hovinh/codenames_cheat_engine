@@ -41,6 +41,24 @@ def test_construction_sets_initial_state():
     assert game.get_game_history() == []
 
 
+def test_team_with_more_words_goes_first():
+    game = make_game(
+        keyword_list=['dog', 'cat', 'car', 'tree', 'bird'],
+        team_blue=['dog'],
+        team_red=['cat', 'car', 'tree'],
+    )
+    assert game.get_team_turn() == 'team_red'
+
+
+def test_tied_word_counts_default_to_blue():
+    game = make_game(
+        keyword_list=['dog', 'cat', 'car', 'tree'],
+        team_blue=['dog', 'cat'],
+        team_red=['car', 'tree'],
+    )
+    assert game.get_team_turn() == 'team_blue'
+
+
 def test_switch_turn_alternates_and_wraps():
     game = make_game()
     assert game.get_team_turn() == 'team_blue'

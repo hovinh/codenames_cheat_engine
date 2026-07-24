@@ -1,10 +1,13 @@
 '''
-One-time (re-runnable) data prep: builds data/conceptnet_relatedto_nouns_en.tsv.gz
-from ConceptNet 5.7, for use by concept_net_data.py at app runtime.
+One-time (re-runnable) data prep: builds data/conceptnet_nouns_en.tsv.gz from
+ConceptNet 5.7, for use by concept_net_data.py at app runtime.
 
 This does NOT run as part of the app — it's a developer tool to (re)generate the
-bundled dataset, e.g. after changing RELATIONS below to tighten/loosen which
-ConceptNet relations count as "related" for clue purposes.
+bundled dataset, e.g. after changing RELATIONS below to loosen/tighten which
+ConceptNet relations count as "related" for clue purposes. Started narrow (the
+core curated commonsense relations) rather than broad (`/r/RelatedTo`, ConceptNet's
+noisiest catch-all relation) — loosen by adding relations back in if suggestions
+feel too sparse.
 
 Source: the conceptnet5/conceptnet5 dataset on Hugging Face (parquet shards,
 mirroring the official ConceptNet 5.7 assertions dump, but noticeably faster to
@@ -28,6 +31,7 @@ import sys
 import tempfile
 import time
 
+import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import requests
@@ -38,8 +42,20 @@ from nltk.corpus import wordnet as wn  # noqa: E402
 
 NUM_SHARDS = 23
 SHARD_URL_TMPL = 'https://huggingface.co/datasets/conceptnet5/conceptnet5/resolve/main/conceptnet5/train-{i:05d}-of-00023.parquet'
-RELATIONS = ('/r/RelatedTo',)  # tighten later, e.g. add '/r/IsA', '/r/UsedFor', '/r/AtLocation'
-OUT_PATH = os.path.join(REPO_ROOT, 'data', 'conceptnet_relatedto_nouns_en.tsv.gz')
+# Core curated ConceptNet commonsense relations (narrow/high-precision). Notably
+# excludes '/r/RelatedTo' (broad/noisy) and purely lexical relations like
+# '/r/Synonym'/'/r/DerivedFrom'. Loosen by adding relations here.
+RELATIONS = (
+    '/r/IsA',
+    '/r/PartOf',
+    '/r/HasA',
+    '/r/UsedFor',
+    '/r/CapableOf',
+    '/r/AtLocation',
+    '/r/MadeOf',
+    '/r/HasProperty',
+)
+OUT_PATH = os.path.join(REPO_ROOT, 'data', 'conceptnet_nouns_en.tsv.gz')
 
 
 def normalize_word(concept_uri):
@@ -68,9 +84,10 @@ def step1_download_and_filter_shards(raw_pairs_path, shard_dir):
             download_shard(i, shard_path)
 
             table = pq.read_table(shard_path, columns=['rel', 'arg1', 'arg2', 'lang', 'weight'])
-            rel_mask = pc.is_in(table.column('rel'), value_set=pc.array(list(RELATIONS)))
+            rel_mask = pc.is_in(table.column('rel'), value_set=pa.array(list(RELATIONS)))
             mask = pc.and_(pc.equal(table.column('lang'), 'en'), rel_mask)
             filtered = table.filter(mask)
+            del table
 
             shard_kept = 0
             for arg1, arg2, weight in zip(filtered.column('arg1').to_pylist(),

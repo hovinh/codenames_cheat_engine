@@ -2,23 +2,26 @@ import functools
 import gzip
 import os
 
-DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'conceptnet_relatedto_nouns_en.tsv.gz')
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'conceptnet_nouns_en.tsv.gz')
 
 
 @functools.lru_cache(maxsize=1)
 def _load_index():
     '''
     Lazily builds {word: {neighbor_word: weight}} from a pre-filtered ConceptNet
-    subset (English, noun-noun, RelatedTo only — see data/README.md for how it
-    was generated). Read directly from the gzipped file (never decompressed to
-    disk) and cached in memory for the process lifetime, since the data never
-    changes at runtime.
+    subset (English, noun-noun, curated commonsense relations only — see
+    data/README.md for how it was generated). Read directly from the gzipped
+    file (never decompressed to disk) and cached in memory for the process
+    lifetime, since the data never changes at runtime.
 
     Reads the module-level DATA_PATH (rather than a default-arg snapshot) so
     tests can monkeypatch it and force a reload via _load_index.cache_clear().
 
-    /r/RelatedTo is a symmetric relation in ConceptNet, so each row populates
-    both directions.
+    Each row is indexed in both directions regardless of the underlying
+    relation's directionality (e.g. IsA/PartOf/UsedFor aren't symmetric in
+    ConceptNet — "dog IsA animal" doesn't imply "animal IsA dog") — for clue
+    purposes, either direction is a useful associative link, and indexing both
+    maximizes recall from an intentionally narrow relation set.
     '''
     index = {}
     with gzip.open(DATA_PATH, 'rt', encoding='utf-8') as f:

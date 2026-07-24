@@ -8,13 +8,8 @@ class SpyMaster(object):
     def __init__(self, similarity_method='lch'):
         '''
         @params:
-            - keyword_list: list of str, 25 code words picked.
-            - team_guessword_dict: dictionary of list of str. Example:
-                {
-                    'team_blue': ['house', 'bird', 'book', ...], # 8 words, always play first
-                    'team_red': ['cat', 'dog', 'pineapple', ...], # 7 words
-                }
-            - chosenword_list: list of str, words have been picked.
+            - similarity_method: str, one of 'path', 'lch', 'wup' — which WordNet
+              similarity metric to score candidate hypernyms with.
         '''
         self._similarity_score_dict = {
             # based on the shortest path that connects the senses in the is-a (hypernym/hypnoym) taxonomy

@@ -90,7 +90,8 @@ def render_help_guide():
         '- **Pick a board** — a sample one, or build your own (paste words, or upload/download the example JSON).\n'
         "- Each turn, the engine suggests clues for whichever team's turn it is. Pick a clue, then pick the "
         "word(s) your team is guessing for it.\n"
-        '- Blue always goes first. A team wins once all of its own words have been found.\n'
+        '- The team with **more** words to find goes first (ties go to Blue) — that extra word offsets '
+        'the advantage of going first. A team wins once all of its own words have been found.\n'
         '- Colors show **both** teams\' words — this is a spymaster tool, nothing is hidden. Guessed words fade '
         'out and get struck through.'
     )
@@ -157,7 +158,7 @@ def render_setup():
             'Every word must exist in WordNet. Ignored if a file is uploaded above.'
         )
         words_raw = st.text_area('Board words (25 total)', height=100)
-        blue_raw = st.text_area('Team Blue words (subset of the board, plays first)')
+        blue_raw = st.text_area('Team Blue words (subset of the board)')
         red_raw = st.text_area('Team Red words (subset of the board)')
         engine_name = render_engine_selector()
 
