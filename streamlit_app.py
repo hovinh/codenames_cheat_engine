@@ -110,7 +110,7 @@ def render_engine_selector():
 
 
 def render_setup():
-    st.title('🕵️ Codenames Cheat Engine')
+    st.title('🕵️ Codenames Hint Giver')
     st.write(
         'Pick a sample board or build your own, then let the engine suggest '
         'clues for each team, turn by turn.'
@@ -307,7 +307,7 @@ def render_history(game):
 
 
 def main():
-    st.set_page_config(page_title='Codenames Cheat Engine', page_icon='🕵️', layout='centered')
+    st.set_page_config(page_title='Codenames Hint Giver', page_icon='🕵️', layout='centered')
     init_state()
 
     game = st.session_state['game']
